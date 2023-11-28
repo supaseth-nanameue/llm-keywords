@@ -1,4 +1,7 @@
 from collections import Counter
+import re
+
+import pandas as pd
 
 
 def get_higest_percentage(text: str = None) -> (str, int, float):
@@ -61,3 +64,22 @@ def postprocess(tokenized_texts: list = None) -> list:
         tkn = list(dict.fromkeys(tkn))
         lst_text_cleaned.append(" ".join([prefix] + tkn + [suffix]))
     return lst_text_cleaned
+
+
+def post_ids_formatter(df_input: pd.DataFrame = None) -> pd.DataFrame:
+    LEN_LINE_OUTPUT = 10
+    THRESHOLD_NG_SCORE = 0.8
+    THRESHOLD_DECLINE_IN_PUBLIC = 0.9
+    df_final_post_ids = df_input.loc[
+        (df_input["ng_score"] <= THRESHOLD_NG_SCORE)
+        & (df_input["decline_in_public"] <= THRESHOLD_DECLINE_IN_PUBLIC),
+        :,
+    ]
+    lst_final_post_ids = df_final_post_ids["post_id"].tolist()
+    print(f"Number of final posts: {len(lst_final_post_ids)}")
+    # print(f"From: {selected_date}")
+    for idx in range(len(lst_final_post_ids) // LEN_LINE_OUTPUT):
+        idx_start = idx * LEN_LINE_OUTPUT
+        idx_end = (idx + 1) * LEN_LINE_OUTPUT
+        print(lst_final_post_ids[idx_start:idx_end])
+    print(lst_final_post_ids[idx_end:])
