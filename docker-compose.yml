@@ -1,0 +1,11 @@
+version: "3.8"
+
+services:
+  inference:
+    image: "inference:0.1.0"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./data:${WORKDIR}
+    command: tail -f /dev/null
