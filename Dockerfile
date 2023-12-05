@@ -24,4 +24,5 @@ COPY poetry.lock pyproject.toml ./
 RUN poetry config virtualenvs.create false \
     && poetry install $(test "$YOUR_ENV" == production && echo "--no-dev") --no-interaction --no-ansi
 
-WORKDIR ${WORKDIR}
+# WORKDIR ${WORKDIR}
+WORKDIR /usr/src/app

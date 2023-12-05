@@ -6,6 +6,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - extractor.env
     volumes:
-      - ./data:${WORKDIR}
-    command: tail -f /dev/null
+      - ./extractor:${WORKDIR}/extractor/
+      - ./test_extractor:${WORKDIR}/test_extractor/
+      - ./data:${WORKDIR}/data/
+      - ./README.md:${WORKDIR}/README.md
+      - ${AWS_CREDENTIAL_PATH}:${SECRETDIR}
+    command: python extractor/extractor.py

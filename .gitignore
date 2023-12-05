@@ -243,4 +243,6 @@ pyrightconfig.json
 # End of https://www.toptal.com/developers/gitignore/api/macos,linux,visualstudiocode,python
 
 # Custom ignore objects
-/llm-keywords/tmp*
+*.env
+.credentials
+.ssh
