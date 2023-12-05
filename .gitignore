@@ -244,3 +244,5 @@ pyrightconfig.json
 
 # Custom ignore objects
 *.env
+.credentials
+.ssh

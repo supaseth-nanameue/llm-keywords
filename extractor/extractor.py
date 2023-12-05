@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import logging
 import os
 import time
 
@@ -10,6 +11,8 @@ from transformers.pipelines import pipeline
 
 from utils import preprocess, postprocess, post_ids_formatter
 
+logging.basicConfig(level=logging.INFO)
+
 
 class BERTExtractor:
     def __init__(self) -> None:
@@ -17,10 +20,11 @@ class BERTExtractor:
             device = torch.device("mps")
         else:
             device = torch.device("cpu")
-        print(f"Current device: {device}")
+        logging.info(f"Current device: {device}")
 
         BERT_JP_MODEL = os.environ.get("BERT_JP_MODEL")
         print(f"Using {BERT_JP_MODEL}")
+        logging.info(f"Using {BERT_JP_MODEL}")
         hf_model = pipeline("feature-extraction", model=BERT_JP_MODEL, device=device)
         self.kw_model = KeyBERT(model=hf_model)
         self.tokenizer = AutoTokenizer.from_pretrained(BERT_JP_MODEL)
@@ -48,16 +52,21 @@ class BERTExtractor:
 
 
 def main():
+    """
+    This function is used to extract keyphrases from the posts
+    Returns:
+        List of post ids with keyphrases from the selected date
+    """
     selected_date = (datetime.now() - timedelta(hours=24)).strftime("%Y%m%d")
     print(f"Selected date: {selected_date}")
-    # selected_date = '20231125'
+    selected_date = "20231125"
     fn_train = f"data/input/{selected_date}_posts.parquet"
     df_train = pd.read_parquet(fn_train)
     train_text = df_train.loc[df_train["post_type"] == "text", "text"].tolist()
     df_train.info()
 
     df_train_processed = preprocess(df_train)
-    df_text_sample = df_train_processed.sample(100, random_state=112).loc[
+    df_text_sample = df_train_processed.sample(300, random_state=112).loc[
         :, ["post_id", "text"]
     ]
     lst_text_sample = df_text_sample["text"].tolist()
@@ -68,7 +77,7 @@ def main():
 
     t0 = time.time()
     kw = BERT.extract(lst_text_tokenized)
-    print(f"Elapsed time: {time.time() - t0:.2f} seconds")
+    logging.info(f"Elapsed time: {time.time() - t0:.2f} seconds")
 
     df_keyphrases = pd.DataFrame(
         [max(s, key=lambda x: x[1]) if s else [] for s in kw],
@@ -78,7 +87,7 @@ def main():
     df_results["url_post"] = df_results["post_id"].apply(
         lambda x: f"https://yay.space/post/{x}"
     )
-    print(f"Have {df_results.dropna().shape[0]} posts with keyphrases")
+    logging.info(f"Have {df_results.dropna().shape[0]} posts with keyphrases")
     df_results.dropna().to_csv(
         f"data/output/csv/{selected_date}_posts_keyphrases.csv", index=False
     )
@@ -89,7 +98,7 @@ def main():
     col_selected = ["post_id", "ng_score", "decline_in_public"]
     df_output = df_results.dropna()
     # uncomment this to select other dates
-    # selected_date = '20231105'
+    selected_date = "20231105"
     df_output = pd.read_parquet(
         f"data/output/parquet/{selected_date}_final_posts.parquet"
     )
