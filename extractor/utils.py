@@ -1,4 +1,6 @@
+import csv
 from collections import Counter
+import logging
 import re
 
 import pandas as pd
@@ -66,20 +68,61 @@ def postprocess(tokenized_texts: list = None) -> list:
     return lst_text_cleaned
 
 
-def post_ids_formatter(df_input: pd.DataFrame = None) -> pd.DataFrame:
+def get_keyphrases(df_input: pd.DataFrame = None, kw: list = None) -> pd.DataFrame:
+    """
+    Returns a DataFrame of posts with keyphrases and scores.
+    Args:
+        df_input: DataFrame of posts
+        kw: list of keyphrases and scores from KeyBERT
+    Output:
+        DataFrame of posts with keyphrases and scores
+    """
+    df_keyphrases = pd.DataFrame(
+        [max(s, key=lambda x: x[1]) if s else [] for s in kw],
+        columns=["keyphrases", "score"],
+    )
+    df = df_input.join(df_keyphrases.set_index(df_input.index))
+    df["url_post"] = df["post_id"].apply(lambda x: f"https://yay.space/post/{x}")
+    df = df.dropna()
+    logging.info(f"Have {df.shape[0]} posts with keyphrases")
+    return df
+
+
+def post_ids_formatter(
+    df_input: pd.DataFrame = None,
+    mode: str = None,
+) -> pd.DataFrame:
+    """
+    Format DataFrame of keywords posts and save to CSV file
+    Args:
+        df_input: DataFrame of posts with keywords
+        mode: normal or textai
+    Output:
+        Post IDs in CSV format
+    """
     LEN_LINE_OUTPUT = 10
-    THRESHOLD_NG_SCORE = 0.8
-    THRESHOLD_DECLINE_IN_PUBLIC = 0.9
-    df_final_post_ids = df_input.loc[
-        (df_input["ng_score"] <= THRESHOLD_NG_SCORE)
-        & (df_input["decline_in_public"] <= THRESHOLD_DECLINE_IN_PUBLIC),
-        :,
-    ]
-    lst_final_post_ids = df_final_post_ids["post_id"].tolist()
+    fn_csv = "data/output/results/post_ids.csv"
+    if not mode:
+        raise ValueError("Mode is not specified")
+    elif mode == "textai":
+        raise NotImplementedError
+        THRESHOLD_NG_SCORE = 0.8
+        THRESHOLD_DECLINE_IN_PUBLIC = 0.9
+        df_final_post_ids = df_input.loc[
+            (df_input["ng_score"] <= THRESHOLD_NG_SCORE)
+            & (df_input["decline_in_public"] <= THRESHOLD_DECLINE_IN_PUBLIC),
+            :,
+        ]
+        lst_final_post_ids = df_final_post_ids["post_id"].tolist()
+    else:
+        lst_final_post_ids = df_input["post_id"].tolist()
     print(f"Number of final posts: {len(lst_final_post_ids)}")
-    # print(f"From: {selected_date}")
-    for idx in range(len(lst_final_post_ids) // LEN_LINE_OUTPUT):
-        idx_start = idx * LEN_LINE_OUTPUT
-        idx_end = (idx + 1) * LEN_LINE_OUTPUT
-        print(lst_final_post_ids[idx_start:idx_end])
-    print(lst_final_post_ids[idx_end:])
+    with open(fn_csv, "w") as f:
+        writer = csv.writer(f)
+        for idx in range(len(lst_final_post_ids) // LEN_LINE_OUTPUT):
+            idx_start = idx * LEN_LINE_OUTPUT
+            idx_end = (idx + 1) * LEN_LINE_OUTPUT
+            writer.writerow(lst_final_post_ids[idx_start:idx_end])
+
+        writer.writerow(lst_final_post_ids[idx_end:])
+    logging.info(f"Post IDs are saved in {fn_csv}")
